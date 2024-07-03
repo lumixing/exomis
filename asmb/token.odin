@@ -19,6 +19,7 @@ TokenType :: enum {
     Int16,
     
     DATA,
+    ALIAS,
     Dollar = 100,
     
     CLS,

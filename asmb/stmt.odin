@@ -44,6 +44,7 @@ UnaryInstr :: struct {
 UnaryInstrType :: enum {
     JumpInt,
     MoveIRegInt,
+    MoveIRegAlias,
 }
 
 BinaryInstr :: struct {
@@ -72,13 +73,20 @@ Meta :: struct {
     type: MetaType,
     value: union {
         DataMeta,
+        AliasMeta,
     },
 }
 
 MetaType :: enum {
     Data,
+    Alias,
 }
 
 DataMeta :: struct {
     data: []u8,
+}
+
+AliasMeta :: struct {
+    name: string,
+    value: Value,
 }
