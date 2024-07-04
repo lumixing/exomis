@@ -11,11 +11,29 @@ Props :: struct {
 
 interp :: proc(stmts: []Stmt) -> []byte {
     props: Props
-    
+    props.pc = 0x200
+
+    // label pass
     for stmt in stmts {
         switch s in stmt {
         case Instr:
             props.pc += 2
+        case Meta:
+            #partial switch v in s.value {
+            case DataMeta:
+                props.pc += u16(len(v.data))
+            case LabelMeta:
+                props.alias[v.name] = props.pc
+            }
+        }
+    }
+
+    props.pc = 0x200
+    
+    for stmt in stmts {
+        switch s in stmt {
+        case Instr:
+            defer props.pc += 2
             switch v in s.value {
             case NullaryInstr:
                 switch v.type {
@@ -26,6 +44,10 @@ interp :: proc(stmts: []Stmt) -> []byte {
                 switch v.type {
                 case .JumpInt:
                     hi, lo := u16_hi_lo(v.value.(u16))
+                    append(&props.data, ..[]u8{0x10 + hi, lo})
+                case .JumpLabel:
+                    value := get_alias(props, v.value.(string))
+                    hi, lo := u16_hi_lo(value)
                     append(&props.data, ..[]u8{0x10 + hi, lo})
                 case .MoveIRegInt:
                     hi, lo := u16_hi_lo(v.value.(u16))
@@ -61,8 +83,11 @@ interp :: proc(stmts: []Stmt) -> []byte {
             switch v in s.value {
             case DataMeta:
                 append(&props.data, ..v.data)
+                props.pc += u16(len(v.data))
             case AliasMeta:
                 props.alias[v.name] = v.value.(u16)
+            case LabelMeta:
+                // props.alias[v.name] = props.pc
             }
         }
     }

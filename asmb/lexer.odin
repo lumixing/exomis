@@ -104,6 +104,7 @@ lexer_ident :: proc(lexer: ^Lexer) {
     case "jmp":  lexer_add(lexer, .JMP)
     case "data": lexer_add(lexer, .DATA)
     case "alias": lexer_add(lexer, .ALIAS)
+    case "label": lexer_add(lexer, .LABEL)
     case: lexer_add(lexer, .Ident, str)
     }
 }

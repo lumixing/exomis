@@ -44,14 +44,23 @@ parser_parse_stmt :: proc(parser: ^Parser) {
             value := parser_expect_current(parser, .Int16)
             
             append(&parser.stmts, Meta{.Alias, AliasMeta{name.(string), value.(u16)}})
+        case .LABEL:
+            name := parser_expect_current(parser, .Ident)
+            append(&parser.stmts, Meta{.Label, LabelMeta{name.(string)}})
         case:
             fmt.println("unknown meta")
         }
     case .CLS:
         append(&parser.stmts, Instr{.Nullary, NullaryInstr{.Clear}})
     case .JMP:
-        value := parser_expect_current(parser, .Int16)
-        append(&parser.stmts, Instr{.Unary, UnaryInstr{.JumpInt, value.(u16)}})
+        value, ok := parser_expect_current(parser, .Int16, true)
+
+        if ok {
+            append(&parser.stmts, Instr{.Unary, UnaryInstr{.JumpInt, value.(u16)}})
+        } else {
+            value = parser_expect_current(parser, .Ident)
+            append(&parser.stmts, Instr{.Unary, UnaryInstr{.JumpLabel, value.(string)}})
+        }
     case .MVI:
         value, ok := parser_expect_current(parser, .Int16, true)
         if ok {
@@ -80,7 +89,9 @@ parser_parse_stmt :: proc(parser: ^Parser) {
         append(&parser.stmts, Instr{.Ternary, TernaryInstr{.Draw, regx.(u8), regy.(u8), height.(u8)}})
     case .EOF:
     case:
-        fmt.println("unexpected token", token)
+        line, col := get_line_and_col(parser.src, token.span.lo)
+        fmt.printfln("error at %d:%d: unexpected %v", line, col, token.type)
+        os.exit(1)
     }
 }
 

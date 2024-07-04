@@ -20,6 +20,7 @@ TokenType :: enum {
     
     DATA,
     ALIAS,
+    LABEL,
     Dollar = 100,
     
     CLS,
