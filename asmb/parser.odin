@@ -40,37 +40,33 @@ parser_parse_stmt :: proc(parser: ^Parser) {
                 parser_advance(parser)
                 parser_expect_current(parser, .Comma)
             }
-            // append(&parser.stmts, Stmt{Meta(DataMeta{data[:]}), token.span})
             parser_add(parser, Meta(DataMeta{data[:]}), token)
         case .ALIAS:
             name := parser_expect_current(parser, .Ident)
             parser_expect_current(parser, .Comma)
             value := parser_expect_current(parser, .Int16)
-            // append(&parser.stmts, Stmt{Meta(AliasMeta{name.(string), value.(u16)}), token.span})
-            parser_add(parser, Meta(AliasMeta{name.(string), value.(u16)}), token)
+            parser_add(parser, Meta(AliasMeta{name.(string), value}), token)
         case .LABEL:
             name := parser_expect_current(parser, .Ident)
-            // append(&parser.stmts, Stmt{Meta(LabelMeta{name.(string)}), token.span})
             parser_add(parser, Meta(LabelMeta{name.(string)}), token)
         case:
-            fmt.println("unknown meta")
+            error(parser.src, token.span, "unknown meta %s", token.type)
         }
     case .CLS:
-        // append(&parser.stmts, Stmt{Instr{.Nullary, NullaryInstr{.Clear}}, token.span})
         parser_add(parser, Instr{.Nullary, NullaryInstr{.Clear}}, token)
     case .JMP:
         if value, ok := parser_expect_current(parser, .Int16, true); ok {
-            parser_add(parser, Instr{.Unary, UnaryInstr{.JumpInt, value.(u16)}}, token)
+            parser_add(parser, Instr{.Unary, UnaryInstr{.JumpInt, value}}, token)
         } else {
             value := parser_expect_current(parser, .Ident)
-            parser_add(parser, Instr{.Unary, UnaryInstr{.JumpLabel, value.(string)}}, token)
+            parser_add(parser, Instr{.Unary, UnaryInstr{.JumpLabel, value}}, token)
         }
     case .MVI:
         if value, ok := parser_expect_current(parser, .Int16, true); ok {
-            parser_add(parser, Instr{.Unary, UnaryInstr{.MoveIRegInt, value.(u16)}}, token)
+            parser_add(parser, Instr{.Unary, UnaryInstr{.MoveIRegInt, value}}, token)
         } else {
             value := parser_expect_current(parser, .Ident)
-            parser_add(parser, Instr{.Unary, UnaryInstr{.MoveIRegAlias, value.(string)}}, token)
+            parser_add(parser, Instr{.Unary, UnaryInstr{.MoveIRegAlias, value}}, token)
         }
     case .MVB:
         reg := parser_expect_register(parser)
@@ -88,7 +84,7 @@ parser_parse_stmt :: proc(parser: ^Parser) {
         regy := parser_expect_current(parser, .Int4)
         parser_expect_current(parser, .Comma)
         height := parser_expect_current(parser, .Int4)
-        parser_add(parser, Instr{.Ternary, TernaryInstr{.Draw, regx.(u8), regy.(u8), height.(u8)}}, token)
+        parser_add(parser, Instr{.Ternary, TernaryInstr{.Draw, regx, regy, height}}, token)
     case .EOF:
     case:
         error(parser.src, token.span, "unexpected %s", token.type)
@@ -109,7 +105,7 @@ parser_expect_int :: proc(parser: ^Parser, type: TokenType) -> Value {
         value = parser_expect_current(parser, .Ident)
     }
 
-    return as_value(value)
+    return value
 }
 
 parser_expect_register :: proc(parser: ^Parser) -> Value {
@@ -119,7 +115,7 @@ parser_expect_register :: proc(parser: ^Parser) -> Value {
         reg = parser_expect_current(parser, .Ident)
     }
 
-    return as_value(reg)
+    return reg
 }
 
 as_value :: proc(value: TokenValue) -> Value {
@@ -131,7 +127,7 @@ as_value :: proc(value: TokenValue) -> Value {
     }
 }
 
-parser_expect_current :: proc(parser: ^Parser, expect_type: TokenType, silent := false) -> (TokenValue, bool) #optional_ok {
+parser_expect_current :: proc(parser: ^Parser, expect_type: TokenType, silent := false) -> (Value, bool) #optional_ok {
     value, ok := parser_expect(parser, parser.tokens[parser.current], expect_type, silent)
     if !silent || ok {
         parser_advance(parser)
@@ -139,13 +135,21 @@ parser_expect_current :: proc(parser: ^Parser, expect_type: TokenType, silent :=
     return value, ok
 }
 
-parser_expect :: proc(parser: ^Parser, token: Token, expect_type: TokenType, silent := false) -> (TokenValue, bool) #optional_ok {
+parser_expect :: proc(parser: ^Parser, token: Token, expect_type: TokenType, silent := false) -> (Value, bool) #optional_ok {
     if token.type == expect_type {
-        return token.value, true
+        #partial switch token.type {
+        case .Int4, .Int8:
+            return token.value.(u8), true
+        case .Int16:
+            return token.value.(u16), true
+        case .Ident:
+            return token.value.(string), true
+        }
+        return as_value(token.value), true
     } else if expect_type == .Int16 && (token.type == .Int4 || token.type == .Int8) {
         return u16(token.value.(u8)), true
     } else if expect_type == .Int8 && token.type == .Int4 {
-        return token.value, true
+        return token.value.(u8), true
     } else if !silent {
         error(parser.src, token.span, "expected %s but got %s", expect_type, token.type)
     }
