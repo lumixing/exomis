@@ -11,6 +11,8 @@ main :: proc() {
 
     input_path := os.args[1]
     input, input_ok := os.read_entire_file(input_path)
+    
+    output_path := os.args[2]
 
     if !input_ok {
         fmt.println("could not read input file")
@@ -37,8 +39,13 @@ main :: proc() {
     //     fmt.println(stmt)
     // }
 
-    data := interp(parser.stmts[:])
+    data := interp(string(input), parser.stmts[:])
     fmt.printfln("%2X", data)
 
-    os.write_entire_file("roms/myibm.ch8", data)
+    output_ok := os.write_entire_file(output_path, data)
+
+    if !output_ok {
+        fmt.println("could not write to output file")
+        os.exit(1)
+    }
 }

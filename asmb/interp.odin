@@ -1,25 +1,24 @@
 package asmb
 
-import "core:fmt"
-import "core:os"
-
 Props :: struct {
+    src: string,
     pc: u16,
     data: [dynamic]byte,
     alias: map[string]u16,
 }
 
-interp :: proc(stmts: []Stmt) -> []byte {
+interp :: proc(src: string, stmts: []Stmt) -> []byte {
     props: Props
+    props.src = src
     props.pc = 0x200
 
     // label pass
     for stmt in stmts {
-        switch s in stmt {
+        switch s in stmt.type {
         case Instr:
             props.pc += 2
         case Meta:
-            #partial switch v in s.value {
+            #partial switch v in s {
             case DataMeta:
                 props.pc += u16(len(v.data))
             case LabelMeta:
@@ -31,7 +30,7 @@ interp :: proc(stmts: []Stmt) -> []byte {
     props.pc = 0x200
     
     for stmt in stmts {
-        switch s in stmt {
+        switch s in stmt.type {
         case Instr:
             defer props.pc += 2
             switch v in s.value {
@@ -46,7 +45,7 @@ interp :: proc(stmts: []Stmt) -> []byte {
                     hi, lo := u16_hi_lo(v.value.(u16))
                     append(&props.data, ..[]u8{0x10 + hi, lo})
                 case .JumpLabel:
-                    value := get_alias(props, v.value.(string))
+                    value := get_alias(props, stmt, v.value.(string))
                     hi, lo := u16_hi_lo(value)
                     append(&props.data, ..[]u8{0x10 + hi, lo})
                 case .MoveIRegInt:
@@ -57,18 +56,18 @@ interp :: proc(stmts: []Stmt) -> []byte {
                         hi, lo := u16_hi_lo(value)
                         append(&props.data, ..[]u8{0xA0 + hi, lo})
                     } else {
-                        fmt.println("alias does not exist!")
+                        error(src, stmt.span, "alias %q does not exist", v.value.(string))
                     }
                 }
             case BinaryInstr:
                 switch v.type {
                 case .MoveRegInt:
-                    reg := reg_or_alias(props, v.first)
-                    value := int8_or_alias(props, v.second)
+                    reg := reg_or_alias(props, stmt, v.first)
+                    value := int8_or_alias(props, stmt, v.second)
                     append(&props.data, ..[]u8{0x60 + reg, value})
                 case .AddRegInt:
-                    reg := reg_or_alias(props, v.first)
-                    value := int8_or_alias(props, v.second)
+                    reg := reg_or_alias(props, stmt, v.first)
+                    value := int8_or_alias(props, stmt, v.second)
                     append(&props.data, ..[]u8{0x70 + reg, value})
                 }
             case TernaryInstr:
@@ -80,7 +79,7 @@ interp :: proc(stmts: []Stmt) -> []byte {
                 }
             }
         case Meta:
-            switch v in s.value {
+            switch v in s {
             case DataMeta:
                 append(&props.data, ..v.data)
                 props.pc += u16(len(v.data))
@@ -95,56 +94,51 @@ interp :: proc(stmts: []Stmt) -> []byte {
     return props.data[:]
 }
 
-get_alias :: proc(props: Props, key: string) -> u16 {
+get_alias :: proc(props: Props, stmt: Stmt, key: string) -> u16 {
     if value, ok := props.alias[key]; ok {
         return value
     } else {
-        fmt.println("alias not found! expand err pls")
-        os.exit(1)
+        error(props.src, stmt.span, "alias %q does not exist", key)
     }
 }
 
-int8_or_alias :: proc(props: Props, value: Value) -> u8 {
+int8_or_alias :: proc(props: Props, stmt: Stmt, value: Value) -> u8 {
     if v, ok := value.(u8); ok {
         return v
     }
 
     if v, ok := value.(string); ok {
-        return u8_range(get_alias(props, v))
+        return u8_range(props, stmt, get_alias(props, stmt, v))
     }
 
-    fmt.println("expected int8 value to be u8 or string!")
-    os.exit(1)
+    error(props.src, stmt.span, "expected Int8 value to be u8 or string but got %v", value)
 }
 
-reg_or_alias :: proc(props: Props, value: Value) -> u8 {
+reg_or_alias :: proc(props: Props, stmt: Stmt, value: Value) -> u8 {
     if v, ok := value.(u8); ok {
-        return reg_range(v)
+        return reg_range(props, stmt, v)
     }
 
     if v, ok := value.(string); ok {
-        return reg_range(get_alias(props, v))
+        return reg_range(props, stmt, get_alias(props, stmt, v))
     }
 
-    fmt.println("expected reg value to be u8 or string!")
-    os.exit(1)
+    error(props.src, stmt.span, "expected Reg value to be u8 or string but got %v", value)
 }
 
-reg_range :: proc(n: $T) -> u8 {
+reg_range :: proc(props: Props, stmt: Stmt, n: $T) -> u8 {
     if n >= 0 && n <= 15 {
         return u8(n)
     } else {
-        fmt.println("bro is out of u4 range")
-        os.exit(1)
+        error(props.src, stmt.span, "value %v %v is out of u4 range", n)
     }
 }
 
-u8_range :: proc(n: $T) -> u8 {
+u8_range :: proc(props: Props, stmt: Stmt, n: $T) -> u8 {
     if n >= 0 && n <= 255 {
         return u8(n)
     } else {
-        fmt.println("bro is out of u8 range")
-        os.exit(1)
+        error(props.src, stmt.span, "value %v is out of u8 range", n)
     }
 }
 

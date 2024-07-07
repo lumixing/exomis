@@ -3,9 +3,8 @@ written in odin
 
 ## tools
 ### emu: emulator
-a chip8 emulator using raylib  
-(future plans for debugging)  
-(will rename to emu)
+a chip8 emulator using raylib and microui  
+(emulator functioning, ui not complete)  
 ```
 odin run src -- path/to/rom.ch8
 ```

@@ -1,6 +1,11 @@
 package asmb
 
-Stmt :: union {
+Stmt :: struct {
+    type: StmtType,
+    span: Span,
+}
+
+StmtType :: union {
     Instr,
     Meta,
 }
@@ -70,19 +75,10 @@ TernaryInstrType :: enum {
     Draw,
 }
 
-Meta :: struct {
-    type: MetaType,
-    value: union {
-        DataMeta,
-        AliasMeta,
-        LabelMeta,
-    },
-}
-
-MetaType :: enum {
-    Data,
-    Alias,
-    Label,
+Meta :: union {
+    DataMeta,
+    AliasMeta,
+    LabelMeta,
 }
 
 DataMeta :: struct {
