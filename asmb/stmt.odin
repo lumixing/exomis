@@ -39,6 +39,7 @@ NullaryInstr :: struct {
 
 NullaryInstrType :: enum {
     Clear,
+    Return,
 }
 
 UnaryInstr :: struct {
@@ -49,6 +50,10 @@ UnaryInstr :: struct {
 UnaryInstrType :: enum {
     JumpInt,
     JumpLabel,
+    CallInt,
+    CallLabel,
+    ShiftRight,
+    ShiftLeft,
     MoveIRegInt,
     MoveIRegAlias,
 }
@@ -60,8 +65,18 @@ BinaryInstr :: struct {
 }
 
 BinaryInstrType :: enum {
+    SkipEqualInt,
+    SkipNotEqualInt,
+    SkipEqualReg,
     MoveRegInt,
     AddRegInt,
+    And,
+    Or,
+    Xor,
+    AddRegReg,
+    Sub,
+    SubReverse,
+    SkipNotEqualReg,
 }
 
 TernaryInstr :: struct {

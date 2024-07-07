@@ -37,45 +37,100 @@ interp :: proc(src: string, stmts: []Stmt) -> []byte {
             case NullaryInstr:
                 switch v.type {
                 case .Clear:
-                    append(&props.data, ..[]u8{0x00, 0xE0})
+                    append(&props.data, 0x00, 0xE0)
+                case .Return:
+                    append(&props.data, 0x00, 0xEE)
                 }
             case UnaryInstr:
                 switch v.type {
                 case .JumpInt:
                     hi, lo := u16_hi_lo(v.value.(u16))
-                    append(&props.data, ..[]u8{0x10 + hi, lo})
+                    append(&props.data, 0x10 + hi, lo)
                 case .JumpLabel:
                     value := get_alias(props, stmt, v.value.(string))
                     hi, lo := u16_hi_lo(value)
-                    append(&props.data, ..[]u8{0x10 + hi, lo})
+                    append(&props.data, 0x10 + hi, lo)
+                case .CallInt:
+                    hi, lo := u16_hi_lo(v.value.(u16))
+                    append(&props.data, 0x20 + hi, lo)
+                case .CallLabel:
+                    value := get_alias(props, stmt, v.value.(string))
+                    hi, lo := u16_hi_lo(value)
+                    append(&props.data, 0x20 + hi, lo)
+                case .ShiftRight:
+                    reg := reg_or_alias(props, stmt, v.value)
+                    append(&props.data, 0x80 + reg, 0x6)
+                case .ShiftLeft:
+                    reg := reg_or_alias(props, stmt, v.value)
+                    append(&props.data, 0x80 + reg, 0xE)
                 case .MoveIRegInt:
                     hi, lo := u16_hi_lo(v.value.(u16))
-                    append(&props.data, ..[]u8{0xA0 + hi, lo})
+                    append(&props.data, 0xA0 + hi, lo)
                 case .MoveIRegAlias:
                     if value, ok := props.alias[v.value.(string)]; ok {
                         hi, lo := u16_hi_lo(value)
-                        append(&props.data, ..[]u8{0xA0 + hi, lo})
+                        append(&props.data, 0xA0 + hi, lo)
                     } else {
                         error(src, stmt.span, "alias %q does not exist", v.value.(string))
                     }
                 }
             case BinaryInstr:
                 switch v.type {
+                case .SkipEqualInt:
+                    reg := reg_or_alias(props, stmt, v.first)
+                    value := int8_or_alias(props, stmt, v.second)
+                    append(&props.data, 0x30 + reg, value)
+                case .SkipNotEqualInt:
+                    reg := reg_or_alias(props, stmt, v.first)
+                    value := int8_or_alias(props, stmt, v.second)
+                    append(&props.data, 0x40 + reg, value)
+                case .SkipEqualReg:
+                    regx := reg_or_alias(props, stmt, v.first)
+                    regy := reg_or_alias(props, stmt, v.second)
+                    append(&props.data, 0x50 + regx, regy << 4)
                 case .MoveRegInt:
                     reg := reg_or_alias(props, stmt, v.first)
                     value := int8_or_alias(props, stmt, v.second)
-                    append(&props.data, ..[]u8{0x60 + reg, value})
+                    append(&props.data, 0x60 + reg, value)
                 case .AddRegInt:
                     reg := reg_or_alias(props, stmt, v.first)
                     value := int8_or_alias(props, stmt, v.second)
-                    append(&props.data, ..[]u8{0x70 + reg, value})
+                    append(&props.data, 0x70 + reg, value)
+                case .And:
+                    regx := reg_or_alias(props, stmt, v.first)
+                    regy := reg_or_alias(props, stmt, v.second)
+                    append(&props.data, 0x80 + regx, (regy << 4) + 0x1)
+                case .Or:
+                    regx := reg_or_alias(props, stmt, v.first)
+                    regy := reg_or_alias(props, stmt, v.second)
+                    append(&props.data, 0x80 + regx, (regy << 4) + 0x2)
+                case .Xor:
+                    regx := reg_or_alias(props, stmt, v.first)
+                    regy := reg_or_alias(props, stmt, v.second)
+                    append(&props.data, 0x80 + regx, (regy << 4) + 0x3)
+                case .AddRegReg:
+                    regx := reg_or_alias(props, stmt, v.first)
+                    regy := reg_or_alias(props, stmt, v.second)
+                    append(&props.data, 0x80 + regx, (regy << 4) + 0x4)
+                case .Sub:
+                    regx := reg_or_alias(props, stmt, v.first)
+                    regy := reg_or_alias(props, stmt, v.second)
+                    append(&props.data, 0x80 + regx, (regy << 4) + 0x5)
+                case .SubReverse:
+                    regx := reg_or_alias(props, stmt, v.first)
+                    regy := reg_or_alias(props, stmt, v.second)
+                    append(&props.data, 0x80 + regx, (regy << 4) + 0x7)
+                case .SkipNotEqualReg:
+                    regx := reg_or_alias(props, stmt, v.first)
+                    regy := reg_or_alias(props, stmt, v.second)
+                    append(&props.data, 0x90 + regx, regy << 4)
                 }
             case TernaryInstr:
                 switch v.type {
                 case .Draw:
                     hi := 0xD0 + v.first.(u8)
                     lo := (v.second.(u8) << 4) + v.third.(u8)
-                    append(&props.data, ..[]u8{hi, lo})
+                    append(&props.data, hi, lo)
                 }
             }
         case Meta:

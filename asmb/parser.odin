@@ -54,6 +54,8 @@ parser_parse_stmt :: proc(parser: ^Parser) {
         }
     case .CLS:
         parser_add(parser, Instr{.Nullary, NullaryInstr{.Clear}}, token)
+    case .RET:
+        parser_add(parser, Instr{.Nullary, NullaryInstr{.Return}}, token)
     case .JMP:
         if value, ok := parser_expect_current(parser, .Int16, true); ok {
             parser_add(parser, Instr{.Unary, UnaryInstr{.JumpInt, value}}, token)
@@ -61,13 +63,28 @@ parser_parse_stmt :: proc(parser: ^Parser) {
             value := parser_expect_current(parser, .Ident)
             parser_add(parser, Instr{.Unary, UnaryInstr{.JumpLabel, value}}, token)
         }
-    case .MVI:
+    case .CALL:
         if value, ok := parser_expect_current(parser, .Int16, true); ok {
-            parser_add(parser, Instr{.Unary, UnaryInstr{.MoveIRegInt, value}}, token)
+            parser_add(parser, Instr{.Unary, UnaryInstr{.CallInt, value}}, token)
         } else {
             value := parser_expect_current(parser, .Ident)
-            parser_add(parser, Instr{.Unary, UnaryInstr{.MoveIRegAlias, value}}, token)
+            parser_add(parser, Instr{.Unary, UnaryInstr{.CallLabel, value}}, token)
         }
+    case .SEB:
+        reg := parser_expect_register(parser)
+        parser_expect_current(parser, .Comma)
+        value := parser_expect_int(parser, .Int8)
+        parser_add(parser, Instr{.Binary, BinaryInstr{.SkipEqualInt, reg, value}}, token)
+    case .SNEB:
+        reg := parser_expect_register(parser)
+        parser_expect_current(parser, .Comma)
+        value := parser_expect_int(parser, .Int8)
+        parser_add(parser, Instr{.Binary, BinaryInstr{.SkipNotEqualInt, reg, value}}, token)
+    case .SER:
+        regx := parser_expect_register(parser)
+        parser_expect_current(parser, .Comma)
+        regy := parser_expect_register(parser)
+        parser_add(parser, Instr{.Binary, BinaryInstr{.SkipEqualReg, regx, regy}}, token)
     case .MVB:
         reg := parser_expect_register(parser)
         parser_expect_current(parser, .Comma)
@@ -78,6 +95,54 @@ parser_parse_stmt :: proc(parser: ^Parser) {
         parser_expect_current(parser, .Comma)
         value := parser_expect_int(parser, .Int8)
         parser_add(parser, Instr{.Binary, BinaryInstr{.AddRegInt, reg, value}}, token)
+    case .AND:
+        regx := parser_expect_register(parser)
+        parser_expect_current(parser, .Comma)
+        regy := parser_expect_register(parser)
+        parser_add(parser, Instr{.Binary, BinaryInstr{.And, regx, regy}}, token)
+    case .OR:
+        regx := parser_expect_register(parser)
+        parser_expect_current(parser, .Comma)
+        regy := parser_expect_register(parser)
+        parser_add(parser, Instr{.Binary, BinaryInstr{.Or, regx, regy}}, token)
+    case .XOR:
+        regx := parser_expect_register(parser)
+        parser_expect_current(parser, .Comma)
+        regy := parser_expect_register(parser)
+        parser_add(parser, Instr{.Binary, BinaryInstr{.Xor, regx, regy}}, token)
+    case .ADDR:
+        regx := parser_expect_register(parser)
+        parser_expect_current(parser, .Comma)
+        regy := parser_expect_register(parser)
+        parser_add(parser, Instr{.Binary, BinaryInstr{.AddRegReg, regx, regy}}, token)
+    case .SUB:
+        regx := parser_expect_register(parser)
+        parser_expect_current(parser, .Comma)
+        regy := parser_expect_register(parser)
+        parser_add(parser, Instr{.Binary, BinaryInstr{.Sub, regx, regy}}, token)
+    case .SHR:
+        reg := parser_expect_register(parser)
+        parser_add(parser, Instr{.Unary, UnaryInstr{.ShiftRight, reg}}, token)
+    case .SUBN:
+        regx := parser_expect_register(parser)
+        parser_expect_current(parser, .Comma)
+        regy := parser_expect_register(parser)
+        parser_add(parser, Instr{.Binary, BinaryInstr{.SubReverse, regx, regy}}, token)
+    case .SHL:
+        reg := parser_expect_register(parser)
+        parser_add(parser, Instr{.Unary, UnaryInstr{.ShiftLeft, reg}}, token)
+    case .SNER:
+        regx := parser_expect_register(parser)
+        parser_expect_current(parser, .Comma)
+        regy := parser_expect_register(parser)
+        parser_add(parser, Instr{.Binary, BinaryInstr{.SkipNotEqualReg, regx, regy}}, token)
+    case .MVI:
+        if value, ok := parser_expect_current(parser, .Int16, true); ok {
+            parser_add(parser, Instr{.Unary, UnaryInstr{.MoveIRegInt, value}}, token)
+        } else {
+            value := parser_expect_current(parser, .Ident)
+            parser_add(parser, Instr{.Unary, UnaryInstr{.MoveIRegAlias, value}}, token)
+        }
     case .DRW:
         regx := parser_expect_current(parser, .Int4)
         parser_expect_current(parser, .Comma)
