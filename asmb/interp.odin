@@ -73,6 +73,15 @@ interp :: proc(src: string, stmts: []Stmt) -> []byte {
                     } else {
                         error(src, stmt.span, "alias %q does not exist", v.value.(string))
                     }
+                case .SkipKeyPressed:
+                    reg := reg_or_alias(props, stmt, v.value)
+                    append(&props.data, 0xE0 + reg, 0x9E)
+                case .SkipKeyNotPressed:
+                    reg := reg_or_alias(props, stmt, v.value)
+                    append(&props.data, 0xE0 + reg, 0xA1)
+                case .Sprite:
+                    reg := reg_or_alias(props, stmt, v.value)
+                    append(&props.data, 0xF0 + reg, 0x29)
                 }
             case BinaryInstr:
                 switch v.type {
@@ -96,6 +105,10 @@ interp :: proc(src: string, stmts: []Stmt) -> []byte {
                     reg := reg_or_alias(props, stmt, v.first)
                     value := int8_or_alias(props, stmt, v.second)
                     append(&props.data, 0x70 + reg, value)
+                case .MoveRegReg:
+                    regx := reg_or_alias(props, stmt, v.first)
+                    regy := reg_or_alias(props, stmt, v.second)
+                    append(&props.data, 0x80 + regx, (regy << 4) + 0x0)
                 case .And:
                     regx := reg_or_alias(props, stmt, v.first)
                     regy := reg_or_alias(props, stmt, v.second)
@@ -116,6 +129,10 @@ interp :: proc(src: string, stmts: []Stmt) -> []byte {
                     regx := reg_or_alias(props, stmt, v.first)
                     regy := reg_or_alias(props, stmt, v.second)
                     append(&props.data, 0x80 + regx, (regy << 4) + 0x5)
+                case .Random:
+                    reg := reg_or_alias(props, stmt, v.first)
+                    value := int8_or_alias(props, stmt, v.second)
+                    append(&props.data, 0xC0 + reg, value)
                 case .SubReverse:
                     regx := reg_or_alias(props, stmt, v.first)
                     regy := reg_or_alias(props, stmt, v.second)
@@ -128,9 +145,10 @@ interp :: proc(src: string, stmts: []Stmt) -> []byte {
             case TernaryInstr:
                 switch v.type {
                 case .Draw:
-                    hi := 0xD0 + v.first.(u8)
-                    lo := (v.second.(u8) << 4) + v.third.(u8)
-                    append(&props.data, hi, lo)
+                    regx := reg_or_alias(props, stmt, v.first)
+                    regy := reg_or_alias(props, stmt, v.second)
+                    height := int8_or_alias(props, stmt, v.third)
+                    append(&props.data, 0xD0 + regx, (regy << 4) + height)
                 }
             }
         case Meta:

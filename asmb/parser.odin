@@ -95,6 +95,11 @@ parser_parse_stmt :: proc(parser: ^Parser) {
         parser_expect_current(parser, .Comma)
         value := parser_expect_int(parser, .Int8)
         parser_add(parser, Instr{.Binary, BinaryInstr{.AddRegInt, reg, value}}, token)
+    case .MVR:
+        regx := parser_expect_register(parser)
+        parser_expect_current(parser, .Comma)
+        regy := parser_expect_register(parser)
+        parser_add(parser, Instr{.Binary, BinaryInstr{.MoveRegReg, regx, regy}}, token)
     case .AND:
         regx := parser_expect_register(parser)
         parser_expect_current(parser, .Comma)
@@ -143,13 +148,27 @@ parser_parse_stmt :: proc(parser: ^Parser) {
             value := parser_expect_current(parser, .Ident)
             parser_add(parser, Instr{.Unary, UnaryInstr{.MoveIRegAlias, value}}, token)
         }
+    case .RND:
+        reg := parser_expect_register(parser)
+        parser_expect_current(parser, .Comma)
+        value := parser_expect_int(parser, .Int8)
+        parser_add(parser, Instr{.Binary, BinaryInstr{.Random, reg, value}}, token)
     case .DRW:
-        regx := parser_expect_current(parser, .Int4)
+        regx := parser_expect_register(parser)
         parser_expect_current(parser, .Comma)
-        regy := parser_expect_current(parser, .Int4)
+        regy := parser_expect_register(parser)
         parser_expect_current(parser, .Comma)
-        height := parser_expect_current(parser, .Int4)
+        height := parser_expect_int(parser, .Int4)
         parser_add(parser, Instr{.Ternary, TernaryInstr{.Draw, regx, regy, height}}, token)
+    case .SKP:
+        reg := parser_expect_register(parser)
+        parser_add(parser, Instr{.Unary, UnaryInstr{.SkipKeyPressed, reg}}, token)
+    case .SKNP:
+        reg := parser_expect_register(parser)
+        parser_add(parser, Instr{.Unary, UnaryInstr{.SkipKeyNotPressed, reg}}, token)
+    case .SPR:
+        reg := parser_expect_register(parser)
+        parser_add(parser, Instr{.Unary, UnaryInstr{.Sprite, reg}}, token)
     case .EOF:
     case:
         error(parser.src, token.span, "unexpected %s", token.type)

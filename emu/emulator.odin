@@ -83,7 +83,7 @@ emu_execute :: proc(emu: ^Emulator) {
     hi := emu.ram[emu.pc]
     lo := emu.ram[emu.pc + 1]
     op := (u16(hi) << 8) | u16(lo)
-    fmt.printfln("%4X", op)
+    // fmt.printfln("%4X", op)
     emu.pc += 2
 
     d1 := (op & 0xF000) >> 12
@@ -167,7 +167,8 @@ emu_execute :: proc(emu: ^Emulator) {
     case 0xB: // JMPR nnn
         emu.pc = nnn + u16(emu.v_reg[0])
     case 0xC: // RND x,nn
-        emu.v_reg[x] = u8(rand.uint32()) & nn
+        // emu.v_reg[x] = u8(rand.uint32()) & nn
+        emu.v_reg[x] = u8(rand.int_max(int(nn)))
     case 0xD: // DRW x,y,n
         cx := u16(emu.v_reg[x])
         cy := u16(emu.v_reg[y])

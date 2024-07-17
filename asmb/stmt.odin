@@ -56,6 +56,9 @@ UnaryInstrType :: enum {
     ShiftLeft,
     MoveIRegInt,
     MoveIRegAlias,
+    SkipKeyPressed,
+    SkipKeyNotPressed,
+    Sprite,
 }
 
 BinaryInstr :: struct {
@@ -70,11 +73,13 @@ BinaryInstrType :: enum {
     SkipEqualReg,
     MoveRegInt,
     AddRegInt,
+    MoveRegReg,
     And,
     Or,
     Xor,
     AddRegReg,
     Sub,
+    Random,
     SubReverse,
     SkipNotEqualReg,
 }

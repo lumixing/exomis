@@ -2,6 +2,7 @@ package emu
 
 import "core:os"
 import "core:fmt"
+import "core:flags"
 import "core:unicode/utf8"
 import rl "vendor:raylib"
 import mu "vendor:microui"
@@ -14,7 +15,7 @@ KEYS :: []rl.KeyboardKey{
     .S, .D, .Z, .C,
     .FOUR, .R, .F, .V,
 }
-freeze := true
+freeze: bool
 
 state := struct {
 	mu_ctx: mu.Context,
@@ -28,16 +29,22 @@ log_buf:         [1<<16]byte,
 	bg = {90, 95, 100, 255},
 }
 
+Args :: struct {
+	input: os.Handle `args:"pos=0,required,file=r" usage:".ch8 rom file"`,
+	rate: i32 `args:"pos=1" usage:"framerate (default=500)"`,
+	freeze: bool `usage:"freeze on start (default=false)"`,
+}
+
 emu: Emulator
 
 main :: proc() {
-	if len(os.args) == 1 {
-        fmt.println("give a rom input file!")
-        os.exit(1)
-    }
-
-    rom_path := os.args[1]
-    rom, rom_ok := os.read_entire_file(rom_path)
+ 	args: Args
+ 	args.rate = 500
+ 	// style: flags.Parsing_Style = .Odin
+ 	flags.parse_or_exit(&args, os.args, .Odin)
+ 	
+ 	freeze = args.freeze
+    rom, rom_ok := os.read_entire_file(args.input)
     if !rom_ok {
         fmt.println("could not read rom! (invalid path?)")
         os.exit(1)
@@ -46,7 +53,7 @@ main :: proc() {
     rl.SetTraceLogLevel(.WARNING)
     rl.InitWindow(1280, 720, "exomis")
     defer rl.CloseWindow()
-    rl.SetTargetFPS(RATE)
+    rl.SetTargetFPS(args.rate)
 
     emu = emu_new()
     emu_load(&emu, rom)
