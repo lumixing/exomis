@@ -1,115 +1,115 @@
 package asmb
 
 Stmt :: struct {
-    type: StmtType,
-    span: Span,
+	type: StmtType,
+	span: Span,
 }
 
 StmtType :: union {
-    Instr,
-    Meta,
+	Instr,
+	Meta,
 }
 
 Instr :: struct {
-    type: InstrType,
-    value: union {
-        NullaryInstr,
-        UnaryInstr,
-        BinaryInstr,
-        TernaryInstr,
-    },
+	type: InstrType,
+	value: union {
+		NullaryInstr,
+		UnaryInstr,
+		BinaryInstr,
+		TernaryInstr,
+	},
 }
 
 InstrType :: enum {
-    Nullary,
-    Unary,
-    Binary,
-    Ternary,
+	Nullary,
+	Unary,
+	Binary,
+	Ternary,
 }
 
 Value :: union {
-    u8,
-    u16,
-    string,
+	u8,
+	u16,
+	string,
 }
 
 NullaryInstr :: struct {
-    type: NullaryInstrType,
+	type: NullaryInstrType,
 }
 
 NullaryInstrType :: enum {
-    Clear,
-    Return,
+	Clear,
+	Return,
 }
 
 UnaryInstr :: struct {
-    type: UnaryInstrType,
-    value: Value,
+	type: UnaryInstrType,
+	value: Value,
 }
 
 UnaryInstrType :: enum {
-    JumpInt,
-    JumpLabel,
-    CallInt,
-    CallLabel,
-    ShiftRight,
-    ShiftLeft,
-    MoveIRegInt,
-    MoveIRegAlias,
-    SkipKeyPressed,
-    SkipKeyNotPressed,
-    Sprite,
+	JumpInt,
+	JumpLabel,
+	CallInt,
+	CallLabel,
+	ShiftRight,
+	ShiftLeft,
+	MoveIRegInt,
+	MoveIRegAlias,
+	SkipKeyPressed,
+	SkipKeyNotPressed,
+	Sprite,
 }
 
 BinaryInstr :: struct {
-    type: BinaryInstrType,
-    first: Value,
-    second: Value,
+	type: BinaryInstrType,
+	first: Value,
+	second: Value,
 }
 
 BinaryInstrType :: enum {
-    SkipEqualInt,
-    SkipNotEqualInt,
-    SkipEqualReg,
-    MoveRegInt,
-    AddRegInt,
-    MoveRegReg,
-    And,
-    Or,
-    Xor,
-    AddRegReg,
-    Sub,
-    Random,
-    SubReverse,
-    SkipNotEqualReg,
+	SkipEqualInt,
+	SkipNotEqualInt,
+	SkipEqualReg,
+	MoveRegInt,
+	AddRegInt,
+	MoveRegReg,
+	And,
+	Or,
+	Xor,
+	AddRegReg,
+	Sub,
+	Random,
+	SubReverse,
+	SkipNotEqualReg,
 }
 
 TernaryInstr :: struct {
-    type: TernaryInstrType,
-    first: Value,
-    second: Value,
-    third: Value,
+	type: TernaryInstrType,
+	first: Value,
+	second: Value,
+	third: Value,
 }
 
 TernaryInstrType :: enum {
-    Draw,
+	Draw,
 }
 
 Meta :: union {
-    DataMeta,
-    AliasMeta,
-    LabelMeta,
+	DataMeta,
+	AliasMeta,
+	LabelMeta,
 }
 
 DataMeta :: struct {
-    data: []u8,
+	data: []u8,
 }
 
 AliasMeta :: struct {
-    name: string,
-    value: Value,
+	name: string,
+	value: Value,
 }
 
 LabelMeta :: struct {
-    name: string,
+	name: string,
 }

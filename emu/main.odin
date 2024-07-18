@@ -10,56 +10,54 @@ import mu "vendor:microui"
 RATE :: 500
 SCALE :: 8
 KEYS :: []rl.KeyboardKey{
-    .X, .ONE, .TWO, .THREE,
-    .Q, .W, .E, .A,
-    .S, .D, .Z, .C,
-    .FOUR, .R, .F, .V,
+	.X,    .ONE, .TWO, .THREE,
+	.Q,    .W,   .E,   .A,
+	.S,    .D,   .Z,   .C,
+	.FOUR, .R,   .F,   .V,
 }
-freeze: bool
 
 state := struct {
 	mu_ctx: mu.Context,
-log_buf:         [1<<16]byte,
-	log_buf_len:     int,
+	log_buf: [1<<16]byte,
+	log_buf_len: int,
 	log_buf_updated: bool,
 	bg: mu.Color,
-	
 	atlas_texture: rl.Texture2D,
 }{
 	bg = {90, 95, 100, 255},
 }
 
 Args :: struct {
-	input: os.Handle `args:"pos=0,required,file=r" usage:".ch8 rom file"`,
-	rate: i32 `args:"pos=1" usage:"framerate (default=500)"`,
-	freeze: bool `usage:"freeze on start (default=false)"`,
+	input:  os.Handle `args:"pos=0,required,file=r" usage:".ch8 rom file"`,
+	rate:   i32       `args:"pos=1" usage:"framerate (default=500)"`,
+	freeze: bool      `usage:"freeze on start (default=false)"`,
 }
 
+freeze: bool
 emu: Emulator
 
 main :: proc() {
  	args: Args
  	args.rate = 500
- 	// style: flags.Parsing_Style = .Odin
  	flags.parse_or_exit(&args, os.args, .Odin)
  	
  	freeze = args.freeze
-    rom, rom_ok := os.read_entire_file(args.input)
-    if !rom_ok {
-        fmt.println("could not read rom! (invalid path?)")
-        os.exit(1)
-    }
-    
-    rl.SetTraceLogLevel(.WARNING)
-    rl.InitWindow(1280, 720, "exomis")
-    defer rl.CloseWindow()
-    rl.SetTargetFPS(args.rate)
+	rom, rom_ok := os.read_entire_file(args.input)
+	if !rom_ok {
+		fmt.println("could not read rom! (invalid path?)")
+		os.exit(1)
+	}
+	
+	rl.SetTraceLogLevel(.WARNING)
+	rl.InitWindow(1280, 720, "exomis")
+	defer rl.CloseWindow()
+	rl.SetTargetFPS(args.rate)
 
-    emu = emu_new()
-    emu_load(&emu, rom)
+	emu = emu_new()
+	emu_load(&emu, rom)
 
-    timer: f32	
-    
+	timer: f32	
+	
 	pixels := make([][4]u8, mu.DEFAULT_ATLAS_WIDTH*mu.DEFAULT_ATLAS_HEIGHT)
 	for alpha, i in mu.default_atlas_alpha {
 		pixels[i] = {0xff, 0xff, 0xff, alpha}
@@ -85,25 +83,25 @@ main :: proc() {
 	main_loop: for !rl.WindowShouldClose() {
 		if freeze {
 			if rl.IsKeyPressed(.SPACE) {
-            	emu_execute(&emu)
-            }
-        } else {
-	        timer += rl.GetFrameTime()
-	        if timer > 1 / RATE {
-	            emu_execute(&emu)
-	            emu_tick(&emu)
-	            timer = 0
-	        }
-	    }
+				emu_execute(&emu)
+			}
+		} else {
+			timer += rl.GetFrameTime()
+			if timer > 1 / RATE {
+				emu_execute(&emu)
+				emu_tick(&emu)
+				timer = 0
+			}
+		}
 
-        for key, i in KEYS {
-            if rl.IsKeyDown(key) {
-                emu.keys[i] = true
-            }
-            if rl.IsKeyReleased(key) {
-                emu.keys[i] = false
-            }
-        }
+		for key, i in KEYS {
+			if rl.IsKeyDown(key) {
+				emu.keys[i] = true
+			}
+			if rl.IsKeyReleased(key) {
+				emu.keys[i] = false
+			}
+		}
 		
 		{ // text input
 			text_input: [512]byte = ---
@@ -221,21 +219,21 @@ render :: proc(ctx: ^mu.Context) {
 		}
 	}
 
-    rl.EndScissorMode()
+	rl.EndScissorMode()
 
 	rl.BeginScissorMode(screen_rect.x, screen_rect.y + 24, screen_rect.w, screen_rect.h - 24)
 	defer rl.EndScissorMode()
 
-    rl.ClearBackground(rl.BLACK)
+	rl.ClearBackground(rl.BLACK)
 	// rl.DrawText("drawn text!!!!!!!!!", screen_rect.x, screen_rect.y + 24, 20, rl.GREEN)
 	for pixel, i in emu.screen {
-        if !pixel do continue
-        
-        x := i % WIDTH
-        y := i / WIDTH
+		if !pixel do continue
+		
+		x := i % WIDTH
+		y := i / WIDTH
 
-        rl.DrawRectangle(i32(x) * SCALE + screen_rect.x, i32(y) * SCALE + screen_rect.y + 24, SCALE, SCALE, rl.WHITE)
-    }
+		rl.DrawRectangle(i32(x) * SCALE + screen_rect.x, i32(y) * SCALE + screen_rect.y + 24, SCALE, SCALE, rl.WHITE)
+	}
 }
 
 screen_rect: mu.Rect
@@ -244,31 +242,31 @@ v: mu.Real
 all_windows :: proc(ctx: ^mu.Context) {
 	@static opts := mu.Options{.NO_CLOSE, .NO_RESIZE}
 	
-    if mu.window(ctx, "screen", {8, 8, 64*8, 32*8+24}, opts) {
-        win := mu.get_current_container(ctx)
-        screen_rect = win.rect
-    }
+	if mu.window(ctx, "screen", {8, 8, 64*8, 32*8+24}, opts) {
+		win := mu.get_current_container(ctx)
+		screen_rect = win.rect
+	}
 
-    if mu.window(ctx, "registers", {8, 8+32*8+24+8, 256-4, 256-32}, opts) {
-    	mu.layout_row(ctx, {24, 24, 64, 24, 24, 32})
-    	for b, i in emu.v_reg {
-    		mu.text(ctx, fmt.tprintf("v%d:", i))
-    		mu.text(ctx, fmt.tprintf("%d", b))
-    		mu.text(ctx, fmt.tprintf("(0x%2X)", b))
-    	}
-    }
+	if mu.window(ctx, "registers", {8, 8+32*8+24+8, 256-4, 256-32}, opts) {
+		mu.layout_row(ctx, {24, 24, 64, 24, 24, 32})
+		for b, i in emu.v_reg {
+			mu.text(ctx, fmt.tprintf("v%d:", i))
+			mu.text(ctx, fmt.tprintf("%d", b))
+			mu.text(ctx, fmt.tprintf("(0x%2X)", b))
+		}
+	}
 	
-    if mu.window(ctx, "emulator", {8+256+8-4, 8+32*8+24+8, 256-4, 256-32}, opts) {
+	if mu.window(ctx, "emulator", {8+256+8-4, 8+32*8+24+8, 256-4, 256-32}, opts) {
 		mu.text(ctx, fmt.tprintf("pc: %d (0x%2X)", emu.pc, emu.pc))
 		mu.text(ctx, fmt.tprintf("ireg: %d (0x%2X)", emu.i_reg, emu.i_reg))
-        mu.button(ctx, "reset")
-        if .SUBMIT in mu.button(ctx, "toggle freeze") {
-        	freeze = !freeze
-        }
-    }
+		mu.button(ctx, "reset")
+		if .SUBMIT in mu.button(ctx, "toggle freeze") {
+			freeze = !freeze
+		}
+	}
 
-    if mu.window(ctx, "memory", {8+64*8+8, 8, 256+16, 512}, opts) {
-    	// mu.layout_width(ctx, 1000)
+	if mu.window(ctx, "memory", {8+64*8+8, 8, 256+16, 512}, opts) {
+		// mu.layout_width(ctx, 1000)
 		// mu.layout_row(ctx, {32,8,14,8,14,8,14,8,14,8,14,8,14,8,14,8,14,})
 		mu.layout_row(ctx, {8,14,8,14, 8,14,8,14, 8,14,8,14, 8,14,8,14,})
 		for b, i in emu.ram {
@@ -278,5 +276,5 @@ all_windows :: proc(ctx: ^mu.Context) {
 
 			mu.text(ctx, fmt.tprintf("%2X", b))
 		}
-    }
+	}
 }
