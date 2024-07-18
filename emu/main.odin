@@ -39,7 +39,7 @@ emu: Emulator
 main :: proc() {
  	args: Args
  	args.rate = 500
- 	flags.parse_or_exit(&args, os.args, .Odin)
+ 	flags.parse_or_exit(&args, os.args)
  	
  	freeze = args.freeze
 	rom, rom_ok := os.read_entire_file(args.input)

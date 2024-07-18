@@ -4,7 +4,6 @@ import "core:fmt"
 import "core:os"
 
 Parser :: struct {
-	path: string,
 	src: string,
 	tokens: []Token,
 	stmts: [dynamic]Stmt,
@@ -12,8 +11,8 @@ Parser :: struct {
 	current: int,
 }
 
-parser_new :: proc(path, src: string, tokens: []Token) -> Parser {
-	return Parser{path, src, tokens, {}, 0, 0}
+parser_new :: proc(src: string, tokens: []Token) -> Parser {
+	return Parser{src, tokens, {}, 0, 0}
 }
 
 parser_parse :: proc(parser: ^Parser) {
